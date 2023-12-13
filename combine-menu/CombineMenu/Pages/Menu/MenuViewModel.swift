@@ -12,36 +12,30 @@ import SwiftUI
 class MenuViewModel: ObservableObject {
     @Published var categorizedProducts = [CategorizedProducts]()
     @Published var isPresentingProductView = false
-    
-    private let ditto = DittoManager.shared.ditto
-    private var productsCollection: DittoCollection {
-        return self.ditto.store["products"]
-    }
-    private var categoriesCollection: DittoCollection {
-        return self.ditto.store["categories"]
-    }
-    
+
+    private let store = DittoManager.shared.ditto.store
+
     var productIdToEdit: String?
     var categoryIdForProductToAdd: String?
 
     init() {
-        let productsPublisher = productsCollection.findAll().liveQueryPublisher()
-            .tryMap { $0.documents.map { Product(document: $0) } }
+        let productsPublisher = store.observePublisher(query: "SELECT * FROM products WHERE isDeleted == false", mapTo: Product.self)
+        let categoriesPublisher = store.observePublisher(query: "SELECT * FROM categories", mapTo: Category.self)
 
-        let categoriesPublisher = categoriesCollection.findAll().liveQueryPublisher()
-            .tryMap { $0.documents.map { Category(document: $0) } }
-
-        categoriesPublisher.combineLatest(productsPublisher)
-            .map { (categories, products) in
-                return categories.map({ category -> CategorizedProducts in
+        categoriesPublisher
+            .combineLatest(productsPublisher)
+            .receive(on: DispatchQueue.main)
+            .map { categories, products in
+                categories.map { category in
                     let filteredProducts = products.filter { product in product.categoryId == category.id }
                     return CategorizedProducts(category: category, products: filteredProducts)
-                })
+                }
             }
             .catch { _ in
                 Just([])
             }
             .assign(to: &$categorizedProducts)
+
     }
 
     func presentProductEdit(productIdToEdit: String?, categoryIdForProductToAdd: String?) {
@@ -49,10 +43,14 @@ class MenuViewModel: ObservableObject {
         self.productIdToEdit = productIdToEdit
         self.categoryIdForProductToAdd = categoryIdForProductToAdd
     }
-    
+
     func deleteProduct(categorizedProducts: CategorizedProducts, indexSet: IndexSet) {
-        indexSet.map({ categorizedProducts.products[$0] }).forEach { productToDelete in
-            productsCollection.findByID(productToDelete.id).remove()
+        indexSet.map({ categorizedProducts.products[$0] }).forEach { [weak self] productToDelete in
+            guard let self = self else { return }
+            Task {
+                try! await self.store.execute(query: "UPDATE products SET isDeleted = true WHERE _id = :_id", arguments: ["_id": productToDelete.id])
+            }
+
         }
     }
 
@@ -63,85 +61,61 @@ class MenuViewModel: ObservableObject {
     }
 
     func prepopulate() {
-        try! categoriesCollection
-            .upsert( ["_id": "drinks", "name": "Drinks"] as [String: Any?] )
-        try! categoriesCollection
-            .upsert( ["_id": "entrees", "name": "Entrees"] as [String: Any?] )
-        try! categoriesCollection
-            .upsert( ["_id": "dessert", "name": "Desserts"] as [String: Any?] )
-        
-        try! productsCollection
-            .upsert(
-                ["_id": "coca-cola",
-                 "name": "Coca Cola",
-                 "detail": "Coca Cola soft drink",
-                 "categoryId": "drinks"
-                ] as [String: Any?]
-            )
-        try! productsCollection
-            .upsert(
-                ["_id": "diet-pepsi",
-                 "name": "Diet Pepsi",
-                 "detail": "Diet Pepsi standard flavor",
-                 "categoryId": "drinks"
-                ] as [String: Any?]
-            )
-        try! productsCollection
-            .upsert(
-                ["_id": "cappucino",
-                 "name": "Cappucino",
-                 "detail": "One shot of espresso and steamed milk",
-                 "categoryId": "drinks"
-                ] as [String: Any?]
-            )
-        try! productsCollection
-            .upsert(
-                ["_id": "chicken-sandwich",
-                 "name": "Chicken Sandwich",
-                 "detail": "A grilled chicken sandwich with tomatoes, lettuce and mustard.",
-                 "categoryId": "entrees"
-                ] as [String: Any?]
-            )
-        try! productsCollection
-            .upsert(
-                ["_id": "roast-beef",
-                 "name": "Roast Beef",
-                 "detail": "A roast beef sandwich with tomatoes, lettuce and mustard.",
-                 "categoryId": "entrees"
-                ] as [String: Any?]
-            )
-        try! productsCollection
-            .upsert(
-                ["_id": "fettuccine-alfredo",
-                 "name": "Fettuccine Alfredo",
-                 "detail": "Fresh fettuccine tossed with butter and Parmesan cheese.",
-                 "categoryId": "entrees"
-                ] as [String: Any?]
-            )
-        try! productsCollection
-            .upsert(
-                ["_id": "chocolate-chip-cookie",
-                 "name": "Chocolate Chip Cookie",
-                 "detail": "Chocolate Chip Cookie",
-                 "categoryId": "dessert"
-                ] as [String: Any?]
-            )
-        try! productsCollection
-            .upsert(
-                ["_id": "vanilla-ice-cream",
-                 "name": "Vanilla Ice Cream",
-                 "detail": "Vanilla Ice Cream",
-                 "categoryId": "dessert"
-                ] as [String: Any?]
-            )
-        try! productsCollection
-            .upsert(
-                ["_id": "caramel-candy",
-                 "name": "Caramel Candy",
-                 "detail": "Caramel Candy",
-                 "categoryId": "dessert"
-                ] as [String: Any?]
-            )
+        Task {
+            // Categories
+            let insertCategoryQuery = "INSERT INTO categories DOCUMENTS (:category) ON ID CONFLICT DO NOTHING"
+            try! await store.execute(query: insertCategoryQuery, arguments: ["category": ["_id": "drinks", "name": "Drinks"]])
+            try! await store.execute(query: insertCategoryQuery, arguments: ["category": ["_id": "entrees", "name": "Entrees"]])
+            try! await store.execute(query: insertCategoryQuery, arguments: ["category": ["_id": "dessert", "name": "Desserts"]])
+
+            // Products
+            let insertProductsQuery = "INSERT INTO products DOCUMENTS (:product) ON ID CONFLICT DO NOTHING"
+            try! await store.execute(query: insertProductsQuery, arguments: ["product": ["_id": "coca-cola",
+                                                                                            "name": "Coca Cola",
+                                                                                            "detail": "Coca Cola soft drink",
+                                                                                            "categoryId": "drinks",
+                                                                                            "isDeleted": false]])
+            try! await store.execute(query: insertProductsQuery, arguments: ["product": ["_id": "diet-pepsi",
+                                                                                            "name": "Diet Pepsi",
+                                                                                            "detail": "Diet Pepsi standard flavor",
+                                                                                            "categoryId": "drinks",
+                                                                                            "isDeleted": false]])
+            try! await store.execute(query: insertProductsQuery, arguments: ["product": ["_id": "cappucino",
+                                                                                            "name": "Cappucino",
+                                                                                            "detail": "One shot of espresso and steamed milk",
+                                                                                            "categoryId": "drinks",
+                                                                                            "isDeleted": false]])
+            try! await store.execute(query: insertProductsQuery, arguments: ["product": ["_id": "chicken-sandwich",
+                                                                                            "name": "Chicken Sandwich",
+                                                                                            "detail": "A grilled chicken sandwich with tomatoes, lettuce and mustard.",
+                                                                                            "categoryId": "entrees",
+                                                                                            "isDeleted": false]])
+            try! await store.execute(query: insertProductsQuery, arguments: ["product": ["_id": "roast-beef",
+                                                                                            "name": "Roast Beef",
+                                                                                            "detail": "A roast beef sandwich with tomatoes, lettuce and mustard.",
+                                                                                            "categoryId": "entrees",
+                                                                                            "isDeleted": false]])
+            try! await store.execute(query: insertProductsQuery, arguments: ["product": ["_id": "fettuccine-alfredo",
+                                                                                            "name": "Fettuccine Alfredo",
+                                                                                            "detail": "Fresh fettuccine tossed with butter and Parmesan cheese.",
+                                                                                            "categoryId": "entrees",
+                                                                                            "isDeleted": false]])
+            try! await store.execute(query: insertProductsQuery, arguments: ["product": ["_id": "chocolate-chip-cookie",
+                                                                                            "name": "Chocolate Chip Cookie",
+                                                                                            "detail": "Chocolate Chip Cookie",
+                                                                                            "categoryId": "dessert",
+                                                                                            "isDeleted": false]])
+            try! await store.execute(query: insertProductsQuery, arguments: ["product": ["_id": "vanilla-ice-cream",
+                                                                                            "name": "Vanilla Ice Cream",
+                                                                                            "detail": "Vanilla Ice Cream",
+                                                                                            "categoryId": "dessert",
+                                                                                            "isDeleted": false]])
+            try! await store.execute(query: insertProductsQuery, arguments: ["product": ["_id": "caramel-candy",
+                                                                                            "name": "Caramel Candy",
+                                                                                            "detail": "Caramel Candy",
+                                                                                            "categoryId": "dessert",
+                                                                                            "isDeleted": false]])
+        }
     }
 }
 

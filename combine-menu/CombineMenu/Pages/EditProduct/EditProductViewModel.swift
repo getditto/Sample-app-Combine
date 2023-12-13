@@ -7,57 +7,78 @@
 
 import Combine
 import Foundation
+import DittoSwift
 
-class EditProductViewModel: ObservableObject {
+final class EditProductViewModel: ObservableObject {
     @Published var selectedCategory: Category?
     @Published var categories: [Category] = []
     @Published var name: String = ""
     @Published var detail: String = ""
-    
+
     private var productIdToEdit: String?
     private var categoryIdForProductToAdd: String?
-    private let ditto = DittoManager.shared.ditto
+    private let store = DittoManager.shared.ditto.store
 
     var navigationTitle: String
     var saveButtonText: String
 
+    private var cancellables = Set<AnyCancellable>()
+
     init(productIdToEdit: String?, categoryIdForProductToAdd: String?) {
         self.productIdToEdit = productIdToEdit
-        self.categoryIdForProductToAdd = categoryIdForProductToAdd        
+        self.categoryIdForProductToAdd = categoryIdForProductToAdd
         self.navigationTitle = productIdToEdit != nil ? "Edit Product": "Create Product"
         self.saveButtonText = productIdToEdit != nil ? "Save Changes": "Create Product"
 
-        let categoriesPublisher = ditto.store["categories"].findAll()
-            .liveQueryPublisher()
-            .tryMap { $0.documents.map { Category(document: $0) } }
-            .catch { _ in Just([]) }
+        let getCategories = store.observePublisher(query: "SELECT * FROM categories", mapTo: Category.self)
 
-        categoriesPublisher
-            .assign(to: &$categories)
+        // When showing view as edit
+        if let productIdToEdit = productIdToEdit {
+            let getEditingProduct = store.observePublisher(
+                query: "SELECT * FROM products WHERE _id == :_id",
+                arguments: ["_id": productIdToEdit],
+                mapTo: Product.self,
+                onlyFirst: true
+            )
 
-        Just(categoryIdForProductToAdd)
-            .combineLatest(categoriesPublisher.first())
-            .map { (categoryId, allCategories) -> Category? in
-                return allCategories.first(where: { $0.id == categoryId })
-            }
-            .assign(to: &$selectedCategory)
+            getCategories
+                .combineLatest(getEditingProduct)
+                .receive(on: DispatchQueue.main)
+                .sink(receiveCompletion: { completion in
+                    if case .failure(let error) = completion {
+                        assertionFailure(error.localizedDescription)
+                    }
+                }) { [weak self] categories, product in
+                    guard let self = self else { return }
+                    self.categories = categories
+                    self.name = product.name
+                    self.detail = product.detail
+                    self.selectedCategory = categories.first { $0._id == product.categoryId }
+                }
+                .store(in: &cancellables)
+        }
 
-        guard let productIdToEdit,
-              let doc = ditto.store["products"].findByID(productIdToEdit).exec()
-        else { return }
-
-        self.name = doc["name"].stringValue
-        self.detail = doc["detail"].stringValue
+        // When showing view as create
+        if let categoryIdForProductToAdd = categoryIdForProductToAdd {
+            Just(categoryIdForProductToAdd)
+                .combineLatest(getCategories.first().catch { _ in Empty() })
+                .receive(on: DispatchQueue.main)
+                .map { categoryId, allCategories in
+                    allCategories.first { $0.id == categoryId }
+                }
+                .assign(to: &$selectedCategory)
+        }
     }
 
     func save() {
-        try! ditto.store["products"].upsert(
-            ["_id": productIdToEdit ?? UUID().uuidString,
-             "name": name,
-             "detail": detail,
-             "categoryId": self.selectedCategory?.id
-            ] as [String: Any?]
-        )
+        Task {
+            let product: [String: Any?] =  ["_id": productIdToEdit ?? UUID().uuidString,
+                            "name": name,
+                            "detail": detail,
+                            "categoryId": self.selectedCategory?.id,
+                            "isDeleted": false]
+            try! await store.execute(query: "INSERT INTO products DOCUMENTS (:product) ON ID CONFLICT DO UPDATE", arguments: ["product": product])
+        }
     }
 
     func changeSelectedCategory(_ category: Category) {
