@@ -28,8 +28,8 @@ struct FlightRow_Previews: PreviewProvider {
     static var previews: some View {
         NavigationView {
             List {
-                FlightRow(flight: Flight(_id: 1, from: "LHR", to: "SFO", number: 1234, carrier: "UA"))
-                FlightRow(flight: Flight(_id: 2, from: "JFK", to: "SEA", number: 7894, carrier: "AS"))
+                FlightRow(flight: Flight(_id: "1", from: "LHR", to: "SFO", number: 1234, carrier: "UA"))
+                FlightRow(flight: Flight(_id: "2", from: "JFK", to: "SEA", number: 7894, carrier: "AS"))
             }
             .navigationTitle("Flights")
         }
