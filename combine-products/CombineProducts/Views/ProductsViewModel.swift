@@ -9,36 +9,24 @@ import Combine
 import DittoSwift
 import Foundation
 
-class ProductsViewModel: ObservableObject {
+final class ProductsViewModel: ObservableObject {
     @Published var categorizedProducts = [CategoryWithProducts]()
     private var cancellables = Set<AnyCancellable>()
-    
-    private let ditto = DittoManager.shared.ditto
+
+    private let store = DittoManager.shared.ditto.store
     @Published var isPresentingProductView = false
     var editingProductId: String?
     var editingCategoryId: String?
 
-    private var productsCollection: DittoCollection {
-        return ditto.store[productsKey]
-    }
-    
-    private var categoriesCollection: DittoCollection {
-        return ditto.store[categoriesKey]
-    }
-    
-
     init() {
         DittoManager.shared.startSync()
-        
-        let productsPublisher = productsCollection.findAll().liveQueryPublisher()
-            .tryMap { $0.documents.map { Product(document: $0) } }
 
-        let categoriesPublisher = categoriesCollection.findAll().liveQueryPublisher()
-            .tryMap { $0.documents.map { Category(document: $0) } }
+        let productsPublisher = store.observePublisher(query: "SELECT * FROM products", mapTo: Product.self)
+        let categoriesPublisher = store.observePublisher(query: "SELECT * FROM categories", mapTo: Category.self)
 
         categoriesPublisher.combineLatest(productsPublisher)
-            .map { (categories, products) in
-                return categories.map { category -> CategoryWithProducts in
+            .map { categories, products in
+                categories.map { category -> CategoryWithProducts in
                     let filteredProducts = products.filter { product in product.categoryId == category.id }
                     return CategoryWithProducts(category: category, products: filteredProducts)
                 }
@@ -46,22 +34,14 @@ class ProductsViewModel: ObservableObject {
             .catch { _ in
                 Just([])
             }
-//            .print()
             .assign(to: \.categorizedProducts, on: self)
             .store(in: &cancellables)
-    }
-    
-    func deleteProduct(categorizedProducts: CategoryWithProducts, indexSet: IndexSet) {
-        indexSet.map { categorizedProducts.products[$0] }
-            .forEach { productToDelete in
-                productsCollection.findByID(productToDelete.id).remove()
-        }
     }
 
     func presentProductEdit(productIdToEdit: String?, categoryIdForProductToAdd: String?) {
         isPresentingProductView = true
-        self.editingProductId = productIdToEdit
-        self.editingCategoryId = categoryIdForProductToAdd
+        editingProductId = productIdToEdit
+        editingCategoryId = categoryIdForProductToAdd
     }
 
     func clearEditingData() {
@@ -69,54 +49,28 @@ class ProductsViewModel: ObservableObject {
         editingCategoryId = nil
         isPresentingProductView = false
     }
-    
+
     func prepopulate() {
-        removeAllData()
-        
-        try! categoriesCollection.upsert(
-            [dbIdKey: "Power Tools", nameKey: "Power Tools"] as [String: Any?]
-        )
-        
-        try! categoriesCollection.upsert(
-            [dbIdKey: "Hand Tools", nameKey: "Hand Tools"] as [String: Any?]
-        )
+        Task {
+            let powerTools = "Power Tools"
+            let handTools = "Hand Tools"
+            let shopTools = "Shop Tools"
 
-        try! categoriesCollection.upsert(
-            [dbIdKey: "Shop Tools", nameKey: "Shop Tools"] as [String: Any?]
-        )
+            // Categories
+            let insertCategoryQuery = "INSERT INTO \(Key.categories) DOCUMENTS (:category) ON ID CONFLICT DO NOTHING"
+            try! await store.execute(query: insertCategoryQuery, arguments: ["category": [Key.dbId: powerTools, Key.name: powerTools]])
+            try! await store.execute(query: insertCategoryQuery, arguments: ["category": [Key.dbId: handTools, Key.name: handTools]])
+            try! await store.execute(query: insertCategoryQuery, arguments: ["category": [Key.dbId: shopTools, Key.name: shopTools]])
 
-        try! productsCollection.upsert(
-            [nameKey: "circular saw", categoryIdKey: "Power Tools"] as [String: Any?]
-        )
-        try! productsCollection.upsert(
-            [nameKey: "cordless drill", categoryIdKey: "Power Tools"] as [String: Any?]
-        )
-
-        try! productsCollection.upsert(
-            [nameKey: "Phillips screwdriver", categoryIdKey: "Hand Tools"] as [String: Any?]
-        )
-        try! productsCollection.upsert(
-            [nameKey: "crescent wrench", categoryIdKey: "Hand Tools"] as [String: Any?]
-        )
-        try! productsCollection.upsert(
-            [nameKey: "wire cutters", categoryIdKey: "Hand Tools"] as [String: Any?]
-        )
-        
-        try! productsCollection.upsert(
-            [nameKey: "drill press", categoryIdKey: "Shop Tools"] as [String: Any?]
-        )
-        try! productsCollection.upsert(
-            [nameKey: "bench grinder", categoryIdKey: "Shop Tools"] as [String: Any?]
-        )
-
-    }
-    
-    func removeAllData() {
-        categorizedProducts.map { $0 }.forEach { catProd in
-            catProd.products.map {$0}.forEach { prodToDelete in
-                productsCollection.findByID(prodToDelete.id).remove()
-            }
-            categoriesCollection.findByID(catProd.category.id).remove()
+            // Products
+            let insertProductQuery = "INSERT INTO \(Key.products) DOCUMENTS (:product) ON ID CONFLICT DO NOTHING"
+            try! await store.execute(query: insertProductQuery, arguments: ["product": [Key.dbId: "Circular saw", Key.name: "Circular saw", Key.categoryId: powerTools]])
+            try! await store.execute(query: insertProductQuery, arguments: ["product": [Key.dbId: "Cordless drill", Key.name: "Cordless drill", Key.categoryId: powerTools]])
+            try! await store.execute(query: insertProductQuery, arguments: ["product": [Key.dbId: "Phillips screwdriver", Key.name: "Phillips screwdriver", Key.categoryId: handTools]])
+            try! await store.execute(query: insertProductQuery, arguments: ["product": [Key.dbId: "Crescent wrench", Key.name: "Crescent wrench", Key.categoryId: handTools]])
+            try! await store.execute(query: insertProductQuery, arguments: ["product": [Key.dbId: "Wire cutters", Key.name: "Wire cutters", Key.categoryId: handTools]])
+            try! await store.execute(query: insertProductQuery, arguments: ["product": [Key.dbId: "Drill press", Key.name: "Drill press", Key.categoryId: shopTools]])
+            try! await store.execute(query: insertProductQuery, arguments: ["product": [Key.dbId: "Bench grinder", Key.name: "Bench grinder", Key.categoryId: shopTools]])
         }
     }
 }

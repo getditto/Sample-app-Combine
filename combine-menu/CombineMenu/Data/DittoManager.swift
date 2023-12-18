@@ -9,7 +9,7 @@ import Foundation
 import DittoSwift
 import Combine
 
-class DittoManager {
+final class DittoManager {
     static var shared = DittoManager()
     let ditto: Ditto
 
@@ -20,6 +20,8 @@ class DittoManager {
 }
 
 protocol DittoDecodable: Decodable {
+    var _id: String { get }
+
     init?(json: String)
 }
 
@@ -107,3 +109,4 @@ extension DittoStore {
         return subject.eraseToAnyPublisher()
     }
 }
+

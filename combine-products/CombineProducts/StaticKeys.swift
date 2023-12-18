@@ -7,27 +7,30 @@
 
 import Foundation
 
-// MARK: Collection Keys
-let categoriesKey = "categories"
-let productsKey = "products"
+struct Key {
 
-// MARK: Model Keys
-let dbIdKey = "_id"
-let idKey = "id"
-let nameKey = "name"
-let categoryIdKey = "categoryId"
+    // MARK: Collection Keys
+    static let categories = "categories"
+    static let products = "products"
 
-// MARK: UI Keys
-let productNameTitleKey = "Product Name"
-let editProductTitleKey = "Edit Product"
-let createProductTitleKey = "Create Product"
+    // MARK: Model Keys
+    static let dbId = "_id"
+    static let id = "id"
+    static let name = "name"
+    static let categoryId = "categoryId"
 
-let categorySectionKey = "Category"
-let categoriesTitleKey = "Categories"
-let addCategoryTitleKey = "Add Category"
+    // MARK: UI Keys
+    static let productNameTitle = "Product Name"
+    static let editProductTitle = "Edit Product"
+    static let createProductTitle = "Create Product"
 
-let circleFillImgKey = "circle.fill"
-let circleOpenImgKey = "circle"
-let requiredKey = "required"
-let saveChangesTitleKey = "Save Changes"
-let cancelTitleKey = "Cancel"
+    static let categorySection = "Category"
+    static let categoriesTitle = "Categories"
+    static let addCategoryTitle = "Add Category"
+
+    static let circleFillImg = "circle.fill"
+    static let circleOpenImg = "circle"
+    static let required = "required"
+    static let saveChangesTitle = "Save Changes"
+    static let cancelTitle = "Cancel"
+}

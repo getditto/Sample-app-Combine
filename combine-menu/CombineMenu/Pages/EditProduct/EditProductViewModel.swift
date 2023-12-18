@@ -32,7 +32,7 @@ final class EditProductViewModel: ObservableObject {
 
         let getCategories = store.observePublisher(query: "SELECT * FROM categories", mapTo: Category.self)
 
-        // When showing view as edit
+        // When showing this view as edit
         if let productIdToEdit = productIdToEdit {
             let getEditingProduct = store.observePublisher(
                 query: "SELECT * FROM products WHERE _id == :_id",
@@ -58,10 +58,17 @@ final class EditProductViewModel: ObservableObject {
                 .store(in: &cancellables)
         }
 
-        // When showing view as create
+        // When showing this view as create
         if let categoryIdForProductToAdd = categoryIdForProductToAdd {
+
+            let categoriesFirstEmit = getCategories.first()
+                .catch { error in
+                    print("ERROR:", error.localizedDescription)
+                    return Just([Category]())
+                }
+
             Just(categoryIdForProductToAdd)
-                .combineLatest(getCategories.first().catch { _ in Empty() })
+                .combineLatest(categoriesFirstEmit)
                 .receive(on: DispatchQueue.main)
                 .map { categoryId, allCategories in
                     allCategories.first { $0.id == categoryId }
@@ -73,10 +80,10 @@ final class EditProductViewModel: ObservableObject {
     func save() {
         Task {
             let product: [String: Any?] =  ["_id": productIdToEdit ?? UUID().uuidString,
-                            "name": name,
-                            "detail": detail,
-                            "categoryId": self.selectedCategory?.id,
-                            "isDeleted": false]
+                                            "name": name,
+                                            "detail": detail,
+                                            "categoryId": self.selectedCategory?.id,
+                                            "isDeleted": false]
             try! await store.execute(query: "INSERT INTO products DOCUMENTS (:product) ON ID CONFLICT DO UPDATE", arguments: ["product": product])
         }
     }
