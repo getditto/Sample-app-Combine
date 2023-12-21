@@ -49,7 +49,8 @@ final class EditProductViewModel: ObservableObject {
                         assertionFailure(error.localizedDescription)
                     }
                 }) { [weak self] categories, product in
-                    guard let self = self else { return }
+                    guard let self = self, let product = product else { return }
+
                     self.categories = categories
                     self.name = product.name
                     self.detail = product.detail

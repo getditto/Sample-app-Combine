@@ -18,9 +18,9 @@ protocol DittoDecodable: Decodable {
 extension DittoDecodable {
     init?(json: String) {
         let data = Data(json.utf8)
-        let decorder = JSONDecoder()
+        let decoder = JSONDecoder()
         do {
-            self = try decorder.decode(Self.self, from: data)
+            self = try decoder.decode(Self.self, from: data)
         } catch {
             print("ERROR:", error.localizedDescription, json)
             return nil
@@ -47,13 +47,13 @@ extension DittoStore {
     }
 
     // Emit with a mapped object as a single value instead of an array
-    func executePublisher<T: DittoDecodable>(query: String, arguments: Dictionary<String, Any?>? = [:], mapTo: T.Type, onlyFirst: Bool) -> AnyPublisher<T, Error> {
+    func executePublisher<T: DittoDecodable>(query: String, arguments: Dictionary<String, Any?>? = [:], mapTo: T.Type, onlyFirst: Bool) -> AnyPublisher<T?, Error> {
         return Future { promise in
             Task.init {
                 do {
                     let result = try await self.execute(query: query, arguments: arguments)
-                    guard let first = result.items.first else { return }
-                    guard let item = T(json: first.jsonString()) else { return }
+                    guard let first = result.items.first else { return promise(.success(nil)) }
+                    let item = T(json: first.jsonString())
                     promise(.success(item))
                 } catch {
                     promise(.failure(error))
@@ -83,13 +83,13 @@ extension DittoStore {
     }
 
     // Send a mapped object as a single value instead of an array
-    func observePublisher<T: DittoDecodable>(query: String, arguments: [String : Any?]? = nil, deliverOn queue: DispatchQueue = .main, mapTo: T.Type, onlyFirst: Bool) -> AnyPublisher<T, Error> {
-        let subject = PassthroughSubject<T, Error>()
+    func observePublisher<T: DittoDecodable>(query: String, arguments: [String : Any?]? = nil, deliverOn queue: DispatchQueue = .main, mapTo: T.Type, onlyFirst: Bool) -> AnyPublisher<T?, Error> {
+        let subject = PassthroughSubject<T?, Error>()
 
         do {
             try self.registerObserver(query: query, arguments: arguments, deliverOn: queue) { result in
-                guard let first = result.items.first else { return }
-                guard let item = T(json: first.jsonString()) else { return }
+                guard let first = result.items.first else { return subject.send(nil) }
+                let item = T(json: first.jsonString())
                 subject.send(item)
             }
         } catch {
