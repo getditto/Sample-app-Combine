@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		11FCA69E2B30ABF000C231A8 /* DittoExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11FCA69D2B30ABF000C231A8 /* DittoExtensions.swift */; };
 		2D7CDC4228A4723B0083B62C /* SolutionPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D7CDC4128A4723B0083B62C /* SolutionPage.swift */; };
 		2D7CDC4428A472450083B62C /* SolutionViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D7CDC4328A472450083B62C /* SolutionViewModel.swift */; };
 		2DF564D728A465B60017DAFA /* SwitchToLatestExampleApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2DF564D628A465B60017DAFA /* SwitchToLatestExampleApp.swift */; };
@@ -23,6 +24,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		11FCA69D2B30ABF000C231A8 /* DittoExtensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DittoExtensions.swift; sourceTree = "<group>"; };
 		2D7CDC4128A4723B0083B62C /* SolutionPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SolutionPage.swift; sourceTree = "<group>"; };
 		2D7CDC4328A472450083B62C /* SolutionViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SolutionViewModel.swift; sourceTree = "<group>"; };
 		2DF564D328A465B60017DAFA /* SwitchToLatestExample.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SwitchToLatestExample.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -112,6 +114,7 @@
 			children = (
 				2DF564EE28A4683C0017DAFA /* BootstrapData.swift */,
 				2DF564F428A46D200017DAFA /* Flight.swift */,
+				11FCA69D2B30ABF000C231A8 /* DittoExtensions.swift */,
 			);
 			path = Data;
 			sourceTree = "<group>";
@@ -148,7 +151,7 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 1340;
-				LastUpgradeCheck = 1340;
+				LastUpgradeCheck = 1510;
 				TargetAttributes = {
 					2DF564D228A465B60017DAFA = {
 						CreatedOnToolsVersion = 13.4.1;
@@ -199,6 +202,7 @@
 				2DF564F728A46DB90017DAFA /* FlightRow.swift in Sources */,
 				2DF564F528A46D200017DAFA /* Flight.swift in Sources */,
 				2DF564F228A46C710017DAFA /* ProblemPage.swift in Sources */,
+				11FCA69E2B30ABF000C231A8 /* DittoExtensions.swift in Sources */,
 				2D7CDC4428A472450083B62C /* SolutionViewModel.swift in Sources */,
 				2DF564D728A465B60017DAFA /* SwitchToLatestExampleApp.swift in Sources */,
 				2D7CDC4228A4723B0083B62C /* SolutionPage.swift in Sources */,
@@ -244,6 +248,7 @@
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -304,6 +309,7 @@
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
@@ -409,7 +415,7 @@
 			repositoryURL = "https://github.com/getditto/DittoSwiftPackage";
 			requirement = {
 				kind = upToNextMajorVersion;
-				minimumVersion = 3.0.0;
+				minimumVersion = 4.0.0;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */

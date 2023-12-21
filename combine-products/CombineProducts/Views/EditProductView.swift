@@ -10,7 +10,7 @@ import SwiftUI
 struct EditProductView: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var viewModel: EditProductViewModel
-    
+
     @State var newCategoryName: String = ""
     @FocusState private var isNewCategoryFocused: Bool
 
@@ -24,25 +24,23 @@ struct EditProductView: View {
     var body: some View {
         NavigationView {
             Form {
-                Section(categorySectionKey) {
-                    // new Category textfield and handling
-                    if viewModel.selectedCategory == nil {
-                        TextField(requiredKey, text: $newCategoryName)
+                Section(Key.categorySection) {
+                    if viewModel.category == nil { // Adding a new category
+                        TextField(Key.required, text: $newCategoryName)
                             .textInputAutocapitalization(.never)
                             .disableAutocorrection(true)
                             .onChange(of: newCategoryName) { text in
                                 viewModel.editingCategoryId = text
                             }
-                    } else {
-                        // selected Category
+                    } else { // Editing an existing product
                         HStack {
-                            Image(systemName: circleFillImgKey)
-                            Text(viewModel.selectedCategory!.name)
+                            Image(systemName: Key.circleFillImg)
+                            Text(viewModel.category!.name)
                         }
                     }
                 }
-                Section(productNameTitleKey) {
-                    TextField(requiredKey, text: $viewModel.productName)
+                Section(Key.productNameTitle) {
+                    TextField(Key.required, text: $viewModel.productName)
                         .textInputAutocapitalization(.never)
                         .disableAutocorrection(true)
                 }
@@ -56,14 +54,14 @@ struct EditProductView: View {
                         Spacer()
                     }
                     .disabled(
-                        (newCategoryName.isEmpty && viewModel.selectedCategory == nil) ||
+                        (newCategoryName.isEmpty && viewModel.category == nil) ||
                         viewModel.productName.isEmpty
                     )
                 }
             }
             .toolbar {
                 ToolbarItemGroup(placement: .navigationBarLeading) {
-                    Button(cancelTitleKey) {
+                    Button(Key.cancelTitle) {
                         dismiss()
                     }
                 }
@@ -72,9 +70,3 @@ struct EditProductView: View {
         }
     }
 }
-
-//struct EditProductView_Previews: PreviewProvider {
-//    static var previews: some View {
-//        EditProductView()
-//    }
-//}
