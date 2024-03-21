@@ -14,17 +14,18 @@ class ProblemViewModel: ObservableObject {
     @Published var carrier: String = DittoManager.carriers.randomElement()!
     @Published var flights: [Flight] = []
 
+    private let store = DittoManager.shared.ditto.store
     var cancellables = Set<AnyCancellable>()
 
     init() {
-        $carrier.sink { carrier in
-            DittoManager.shared.ditto.store.collection("flights").find("carrier == $args.carrier", args: ["carrier": carrier])
-                .liveQueryPublisher()
-                .sink { (docs, _) in
-                    self.flights = docs.map({ Flight(document: $0) })
-                }
-                .store(in: &self.cancellables)
-        }
-        .store(in: &cancellables)
+        $carrier
+            .removeDuplicates()
+            .map { carrier in
+                self.store.observePublisher(query: "SELECT * FROM flights WHERE carrier = :carrier", arguments: ["carrier": carrier], mapTo: Flight.self)
+            }
+            .switchToLatest()
+            .catch { _ in Just([]) }
+            .assign(to: \.flights, on: self)
+            .store(in: &cancellables)
     }
 }

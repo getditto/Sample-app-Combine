@@ -31,7 +31,7 @@ struct ProductsListView: View {
             ToolbarItemGroup(placement: .navigationBarTrailing) {
                 Menu {
                     if !viewModel.categorizedProducts.isEmpty {
-                        Text(categoriesTitleKey)
+                        Text(Key.categoriesTitle)
                         ForEach(viewModel.categorizedProducts) { cat in
                             Button(cat.category.name) {
                                 viewModel.presentProductEdit(
@@ -41,7 +41,7 @@ struct ProductsListView: View {
                             }
                         }
                     }
-                    Button(addCategoryTitleKey) {
+                    Button(Key.addCategoryTitle) {
                         viewModel.presentProductEdit(
                             productIdToEdit: nil,
                             categoryIdForProductToAdd: nil

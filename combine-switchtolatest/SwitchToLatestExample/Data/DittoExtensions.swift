@@ -1,23 +1,13 @@
 //
-//  DittoManager.swift
-//  CombineMenu
+//  DittoExtensions.swift
+//  SwitchToLatestExample
 //
-//  Created by Maximilian Alexander on 3/3/22.
+//  Created by Shunsuke Kondo on 2023/12/19.
 //
 
 import Foundation
 import DittoSwift
 import Combine
-
-final class DittoManager {
-    static var shared = DittoManager()
-    let ditto: Ditto
-
-    init() {
-        ditto = Ditto()
-        try! ditto.disableSyncWithV3()
-    }
-}
 
 protocol DittoDecodable: Decodable {
     var _id: String { get }
@@ -109,4 +99,3 @@ extension DittoStore {
         return subject.eraseToAnyPublisher()
     }
 }
-

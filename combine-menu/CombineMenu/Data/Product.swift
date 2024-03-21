@@ -8,16 +8,12 @@
 import DittoSwift
 import Foundation
 
-struct Product: Identifiable, Equatable, Hashable {
-    var id: String
-    var name: String
-    var detail: String
-    var categoryId: String
-    
-    init(document: DittoDocument) {
-        self.id = document["_id"].stringValue
-        self.name = document["name"].stringValue
-        self.detail = document["detail"].stringValue
-        self.categoryId = document["categoryId"].stringValue
-    }
+struct Product: Identifiable, Equatable, Hashable, DittoDecodable {
+    let _id: String
+    let name: String
+    let detail: String
+    let categoryId: String
+    let isDeleted: Bool
+
+    var id: String { _id } // For Identifiable
 }

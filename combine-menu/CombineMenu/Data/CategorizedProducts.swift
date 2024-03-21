@@ -13,7 +13,6 @@ import Foundation
 struct CategorizedProducts: Identifiable {
     var category: Category
     var products: [Product]
-    var id: String {
-        category.id
-    }
+
+    var id: String { category.id }
 }
